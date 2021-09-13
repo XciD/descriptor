@@ -1,0 +1,22 @@
+[package]
+name = "descriptor"
+version = "0.0.1"
+authors = ["Adrien Carreira <adrien&xcid.fr>"]
+edition = "2018"
+description = "A simple to use struct descriptor"
+repository = "https://github.com/XciD/descriptor"
+keywords = [
+    "struct",
+    "description",
+    "serializer",
+]
+categories = ["command-line-utilities"]
+license = "Apache-2.0"
+readme = "README.md"
+
+[dependencies]
+descriptor_derive = { path = "./descriptor_derive", version = "=0.0.1" }
+chrono = "0.4"
+crossterm = "0.20"
+strip-ansi-escapes = "0.1"
+convert_case = "0.4"

@@ -1,0 +1,26 @@
+[package]
+name = "descriptor_derive"
+version = "0.0.1"
+authors = ["Adrien Carreira <adrien&xcid.fr>"]
+edition = "2018"
+description = "A simple to use struct descriptor, derive crate"
+repository = "https://github.com/XciD/descriptor/tree/master/descriptor_derive"
+keywords = [
+    "struct",
+    "description",
+    "serializer",
+    "derive",
+    "proc_macro"
+]
+categories = ["command-line-utilities"]
+license = "Apache-2.0"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "1.0", features = ["full", "extra-traits"] }
+quote = "1.0"
+convert_case = "0.4"
+proc-macro2 = "1.0"
+proc-macro-error = "1.0"
