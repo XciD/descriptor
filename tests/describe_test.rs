@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use descriptor::{object_describe_to_string, Descriptor};
+use descriptor::{object_describe_to_string, Descriptor, table_describe, table_describe_to_string};
 
 pub fn no_color(str: String) -> String {
     String::from_utf8(strip_ansi_escapes::strip(str).unwrap()).unwrap()
@@ -49,6 +49,12 @@ One:         tee
 
 #[test]
 fn test_func() {
+
+    #[derive(Descriptor)]
+    struct Bar {
+        test: String,
+    }
+
     #[derive(Descriptor)]
     struct Foo {
         #[descriptor(map = map_test)]
@@ -59,25 +65,20 @@ fn test_func() {
         optional_none: Option<u64>,
     }
 
-    fn map_test(val: &u64) -> String {
-        format!("{} seconds", val)
+    fn map_test(val: &u64) -> Bar {
+        Bar{test: format!("{} seconds", val)}
     }
 
-    let description = object_describe_to_string(&Foo {
+    let foo = Foo {
         time: 10000,
         optional_some: Some(10),
         optional_none: None,
-    })
+    };
+    let description = object_describe_to_string(&foo)
     .unwrap();
 
-    assert_eq!(
-        r#"
-Time:          10000 seconds
-Optional Some: 10 seconds
-Optional None: ~
-"#,
-        no_color(description)
-    );
+    let result = table_describe_to_string(&vec![foo]).unwrap();
+    println!("{}", result)
 }
 
 #[test]
@@ -202,7 +203,6 @@ fn test_into_struct_level() {
         bar_into: "bar".to_string(),
     })
     .unwrap();
-    println!("{}", into);
 
     assert_eq!("\nRecv: foo-bar\n", into)
 }
@@ -213,7 +213,7 @@ fn test_into_field_level() {
     struct Foo {
         #[descriptor(into = Bar)]
         foo: FooInto,
-        #[descriptor(into = Bar, map = test, method)]
+        #[descriptor(into = Bar, map = FooInto::test)]
         bar: FooInto,
     }
 

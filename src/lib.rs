@@ -266,15 +266,15 @@
 //!
 //! Act like `into` parameter in struct level,
 //!
-//! `into` parameter can be used with `map` and `method` parameter in field level.
+//! `into` parameter can be used with `map` parameter in field level.
 //! Sometimes, it's impossible to implement `Into` and `From` for some struct,
-//! you can still use a public method from the struct
+//! you can use a public method from the struct
 //! ```
 //! use descriptor::{Descriptor, object_describe_to_string};
 //! #[derive(Descriptor)]
 //! struct Download {
 //!     pub filename: String,
-//!     #[descriptor(into = String, map = to_string, method)]
+//!     #[descriptor(into = String, map = Progress::to_string)]
 //!     pub progress: Progress,
 //! }
 //!
@@ -405,7 +405,6 @@
 use std::collections::HashMap;
 use std::io;
 
-use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 #[doc(hidden)]
 pub use descriptor_derive::{self, *};
@@ -554,12 +553,6 @@ pub trait Describe {
         W: io::Write,
     {
         ctx.write_value(writer, self.to_field(""))
-    }
-}
-
-impl Describe for DateTime<Utc> {
-    fn to_field(&self, _: &str) -> String {
-        self.format("%d-%m-%y %H:%M:%S").to_string()
     }
 }
 
