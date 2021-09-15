@@ -3,7 +3,6 @@ use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::{self, Attribute, Expr, Ident, LitStr, Token};
 
-#[derive(Debug)]
 pub struct DescriptorAttr {
     ident: Ident,
     attribute: String,
@@ -26,7 +25,6 @@ pub struct DescriptorFieldAttr {
     pub skip: bool,
     pub output_table: bool,
     pub resolve_option: bool,
-    pub method: bool,
     pub into: Option<Expr>,
     pub map: Option<Expr>,
     pub rename_description: Option<String>,
@@ -139,7 +137,6 @@ pub fn extract_field_attributes(all_attrs: &[Attribute]) -> DescriptorFieldAttr 
         rename_description: None,
         map: None,
         into: None,
-        method: false,
     };
 
     for attr in parse_attributes(all_attrs) {
@@ -160,10 +157,6 @@ pub fn extract_field_attributes(all_attrs: &[Attribute]) -> DescriptorFieldAttr 
             }
             ("skip", None, None, ..) => field_attribute.skip = true,
             ("skip", _, _, ident) => {
-                abort! {ident,"not expected `string literal` or `expression` after `=`"}
-            }
-            ("method", None, None, ..) => field_attribute.method = true,
-            ("method", _, _, ident) => {
                 abort! {ident,"not expected `string literal` or `expression` after `=`"}
             }
             ("output_table", None, None, ..) => field_attribute.output_table = true,

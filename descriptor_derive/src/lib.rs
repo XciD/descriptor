@@ -381,14 +381,8 @@ fn field_getter(field: &StructField, method: TokenStream) -> TokenStream {
 
     let value = match (&field.attr.map, &field.attr.into) {
         (Some(func), _) => {
-            if field.attr.method {
-                quote! {
-                    #ident.#func()
-                }
-            } else {
-                quote! {
-                    #func(#ident)
-                }
+            quote! {
+                #func(#ident)
             }
         }
         (_, Some(into)) => {

@@ -1,4 +1,4 @@
-//! Easy pretty print your Rust struct into single element or list
+//! Easy pretty print your Rust struct into single element or list.
 //!
 //! # Simple Example
 //! ```
@@ -51,52 +51,14 @@
 //! Corentin 40  10 rue de la paix Paris
 //! "#, format!("\n{}", table));
 //! ```
-//!
+//! <!-- toc -->
 //! # Macro attributes
 //! ## Struct attributes
-//!
-//! #### `#[descriptor(flatten)]`
-//! Flatten a struct into another.
-//!
-//! ```
-//! use descriptor::{Descriptor, object_describe_to_string};
-//!
-//! #[derive(Descriptor)]
-//! struct User {
-//!     name: String,
-//!     age: i32,
-//!     #[descriptor(flatten)]
-//!     address: Address
-//! }
-//!
-//! #[derive(Descriptor)]
-//! struct Address {
-//!     street: String,
-//!     town: String,
-//! }
-//!
-//! let foo = User{
-//!     name: "Adrien".to_string(),
-//!     age: 32,
-//!     address: Address{
-//!         street: "Main street".to_string(),
-//!         town: "NY".to_string()
-//!     }
-//! };
-//! let description = object_describe_to_string(&foo).unwrap();
-//!
-//! assert_eq!(r#"
-//! Name:    Adrien
-//! Age:     32
-//! Street:  Main street
-//! Town:    NY
-//! "#,  description);
-//! ```
 //!
 //! ### `#[descriptor(into = AnotherStruct)]`
 //! The `into` parameter convert the struct into another before describe.
 //!
-//! The `From` or `Into` Trait should be implemented and `AnotherStruct` should implement the `Describe` trait
+//! The `From` or `Into` Trait should be implemented and `AnotherStruct` should implement the `Describe` trait.
 //! ```
 //! use descriptor::{Descriptor, object_describe_to_string};
 //!
@@ -184,7 +146,7 @@
 //!
 //! ### `#[descriptor(default_headers = [""])]`
 //!
-//! Overrides default headers when using the table output
+//! Overrides default headers when using the table output.
 //! ```
 //! use descriptor::{Descriptor, table_describe_to_string};
 //! #[derive(Descriptor, Clone)]
@@ -208,10 +170,49 @@
 //! ```
 //!
 //! ## Field attributes
+
+//! #### `#[descriptor(flatten)]`
+//! Flatten a struct into another.
 //!
-//! ### `#[descriptor(map = ident)]`
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     age: i32,
+//!     #[descriptor(flatten)]
+//!     address: Address
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct Address {
+//!     street: String,
+//!     town: String,
+//! }
+//!
+//! let foo = User{
+//!     name: "Adrien".to_string(),
+//!     age: 32,
+//!     address: Address{
+//!         street: "Main street".to_string(),
+//!         town: "NY".to_string()
+//!     }
+//! };
+//! let description = object_describe_to_string(&foo).unwrap();
+//!
+//! assert_eq!(r#"
+//! Name:    Adrien
+//! Age:     32
+//! Street:  Main street
+//! Town:    NY
+//! "#,  description);
+//! ```
+//!
+//! ### `#[descriptor(map = func)]`
 //! Takes a transformation function as parameter, called before generating the field.
-//! Return value of the function should implement the `Describe` Trait
+//!
+//! Return value of the functions should not be a struct, use `into` parameter for this use case.
 //!
 //! ```
 //! use descriptor::{Descriptor, object_describe_to_string};
@@ -237,7 +238,8 @@
 //! "#,  description);
 //! ```
 //! `map` parameter can be used with `resolve_option` parameter.
-//! If the field is an Option, it extract it before calling the transformation function
+//!
+//! If the field is an Option, it extract it before calling the transformation function.
 //!
 //! ```
 //! use descriptor::{Descriptor, object_describe_to_string};
@@ -266,15 +268,16 @@
 //!
 //! Act like `into` parameter in struct level,
 //!
-//! `into` parameter can be used with `map` and `method` parameter in field level.
+//! `into` parameter can be used with `map` parameter in field level.
+//!
 //! Sometimes, it's impossible to implement `Into` and `From` for some struct,
-//! you can still use a public method from the struct
+//! you can use a public method from the struct
 //! ```
 //! use descriptor::{Descriptor, object_describe_to_string};
 //! #[derive(Descriptor)]
 //! struct Download {
 //!     pub filename: String,
-//!     #[descriptor(into = String, map = to_string, method)]
+//!     #[descriptor(into = String, map = Progress::to_string)]
 //!     pub progress: Progress,
 //! }
 //!
@@ -339,43 +342,82 @@
 //!   Mercedes   2
 //! "#,  description);
 //! ```
-//! ### `#[descriptor(skip_header)]`
+//! ### `#[descriptor(skip)]`
 //!
-//! Skip this field from default headers
+//! - `#[descriptor(skip)]`: Skip this field from description and default headers in table
+//! - `#[descriptor(skip_description)]`: Skip this field only from description
+//! - `#[descriptor(skip_header)]`:  Skip this field from default headers
 //!
 //! ```
-//! use descriptor::{Descriptor, object_describe_to_string, table_describe_to_string, table_describe_with_header_to_string};
+//! use descriptor::{Descriptor, object_describe_to_string, table_describe_to_string, table_describe_with_header_to_string, object_describe};
 //! #[derive(Descriptor, Clone)]
 //! struct Car {
 //!     brand: String,
 //!     #[descriptor(skip_header)]
 //!     seat: i16,
+//!     #[descriptor(skip_description)]
 //!     model: String,
+//!     #[descriptor(skip)]
+//!     serial: String,
 //! }
+//! let  car = Car{brand: "Audi".to_string(), seat:4, model: "A3".to_string(), serial: "SN".to_string()};
+//!
 //! let cars = vec![
-//!     Car{brand: "Audi".to_string(), seat:4, model: "A3".to_string()},
-//!     Car{brand: "Mercedes".to_string(), seat: 2, model: "GLC".to_string()}
+//!     car.clone(),
+//!     Car{brand: "Mercedes".to_string(), seat: 2, model: "GLC".to_string(), serial: "WD".to_string()}
 //! ];
 //!
-//! let description = table_describe_to_string(&cars).unwrap();
+//! let description = object_describe_to_string(&car).unwrap();
+//! assert_eq!(r#"
+//! Brand: Audi
+//! Seat:  4
+//! "#,  format!("{}", description));
+//!
+//! let table = table_describe_to_string(&cars).unwrap();
 //! assert_eq!(r#"
 //! BRAND    MODEL
 //! Audi     A3
 //! Mercedes GLC
-//! "#,  format!("\n{}", description));
+//! "#,  format!("\n{}", table));
 //!
-//! let description = table_describe_with_header_to_string(&cars,&vec!["seat".to_string()] ).unwrap();
+//! let table = table_describe_with_header_to_string(&cars,&vec!["seat".to_string()] ).unwrap();
 //! assert_eq!(r#"
 //! SEAT
 //! 4
 //! 2
-//! "#,  format!("\n{}", description));
+//! "#,  format!("\n{}", table));
+//! ```
+//! ### `#[descriptor(rename_header)]`
+//!
+//! Rename the auto-generated name for table header
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string, table_describe_to_string, table_describe_with_header_to_string, object_describe};
+//! #[derive(Descriptor)]
+//! struct Car {
+//!     #[descriptor(rename_header="Marque")]
+//!     brand: String,
+//!     #[descriptor(rename_header="Siege")]
+//!     seat: i16,
+//! }
+//!
+//! let cars = vec![
+//!     Car{brand: "Audi".to_string(), seat:4},
+//!     Car{brand: "Mercedes".to_string(), seat: 2}
+//! ];
+//!
+//! let table = table_describe_to_string(&cars).unwrap();
+//! assert_eq!(r#"
+//! Marque   Siege
+//! Audi     4
+//! Mercedes 2
+//! "#,  format!("\n{}", table));
 //! ```
 //!
 //! ## Enum parameters
 //! ### `#[descriptor(rename_description = "Renamed")]`
 //!
-//! Rename the value for enums
+//! Rename the value for enums.
 //!
 //! ```
 //! use descriptor::{object_describe_to_string, Descriptor};
@@ -405,7 +447,6 @@
 use std::collections::HashMap;
 use std::io;
 
-use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
 #[doc(hidden)]
 pub use descriptor_derive::{self, *};
@@ -554,12 +595,6 @@ pub trait Describe {
         W: io::Write,
     {
         ctx.write_value(writer, self.to_field(""))
-    }
-}
-
-impl Describe for DateTime<Utc> {
-    fn to_field(&self, _: &str) -> String {
-        self.format("%d-%m-%y %H:%M:%S").to_string()
     }
 }
 

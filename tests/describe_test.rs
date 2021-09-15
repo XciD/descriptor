@@ -202,7 +202,6 @@ fn test_into_struct_level() {
         bar_into: "bar".to_string(),
     })
     .unwrap();
-    println!("{}", into);
 
     assert_eq!("\nRecv: foo-bar\n", into)
 }
@@ -213,7 +212,7 @@ fn test_into_field_level() {
     struct Foo {
         #[descriptor(into = Bar)]
         foo: FooInto,
-        #[descriptor(into = Bar, map = test, method)]
+        #[descriptor(into = Bar, map = FooInto::test)]
         bar: FooInto,
     }
 
