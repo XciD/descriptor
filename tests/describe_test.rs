@@ -7,74 +7,6 @@ pub fn no_color(str: String) -> String {
 }
 
 #[test]
-fn test_simple_struct() {
-    #[derive(Descriptor)]
-    struct Foo {
-        first_field: String,
-        #[descriptor(skip_description)]
-        hidden: String,
-        int_field: i32,
-    }
-
-    let foo = &Foo {
-        first_field: "foo".to_string(),
-        hidden: "test".to_string(),
-        int_field: 1,
-    };
-    let string = object_describe_to_string(foo).unwrap();
-    println!("{}", string);
-    assert_eq!(
-        r#"
-First Field: foo
-Int Field:   1
-"#,
-        string
-    )
-}
-
-#[test]
-fn test_inner_struct() {
-    #[derive(Descriptor)]
-    struct Foo1 {
-        first_field: String,
-        child: ChildFoo,
-        second: Option<OptionalFoo>,
-    }
-
-    #[derive(Descriptor)]
-    struct ChildFoo {
-        anything: String,
-    }
-
-    #[derive(Descriptor)]
-    struct OptionalFoo {
-        another: String,
-    }
-
-    let describe = object_describe_to_string(&Foo1 {
-        first_field: "foo".to_string(),
-        child: ChildFoo {
-            anything: "bar".to_string(),
-        },
-        second: Some(OptionalFoo {
-            another: "another one".to_string(),
-        }),
-    })
-    .unwrap();
-    println!("{}", describe);
-    assert_eq!(
-        describe,
-        r#"
-First Field: foo
-Child:
-  Anything: bar
-Second:
-  Another: another one
-"#
-    );
-}
-
-#[test]
 fn test_flatten() {
     #[derive(Descriptor)]
     struct Foo {
@@ -376,19 +308,19 @@ History:
 fn test_describe_enum() {
     #[derive(Descriptor)]
     struct Foo {
-        enum_field: Bqr,
-        enum_renamed: Bqr,
+        enum_field: Bar,
+        enum_renamed: Bar,
     }
     #[derive(Descriptor)]
-    enum Bqr {
+    enum Bar {
         SomeEnum,
         #[descriptor(rename_description = "Rename AnnotationValue")]
         AnotherRenamed,
     }
 
     let description = object_describe_to_string(&Foo {
-        enum_field: Bqr::SomeEnum,
-        enum_renamed: Bqr::AnotherRenamed,
+        enum_field: Bar::SomeEnum,
+        enum_renamed: Bar::AnotherRenamed,
     })
     .unwrap();
     assert_eq!(
@@ -401,20 +333,20 @@ Enum Renamed: Rename AnnotationValue
 }
 
 #[test]
-fn test_additional_struct() {
+fn test_extra_fields() {
     #[derive(Descriptor)]
-    #[descriptor(additional_struct = ComputedStruct)]
+    #[descriptor(extra_fields = ExtraFieldsStruct)]
     struct Foo {
         first_field: String,
         number: u32,
     }
 
     #[derive(Descriptor)]
-    struct ComputedStruct {
+    struct ExtraFieldsStruct {
         anything: String,
     }
 
-    impl From<&Foo> for ComputedStruct {
+    impl From<&Foo> for ExtraFieldsStruct {
         fn from(b: &Foo) -> Self {
             Self {
                 anything: format!("{}-{}", b.first_field, b.number / 10),

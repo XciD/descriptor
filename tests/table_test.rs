@@ -1,5 +1,4 @@
-use descriptor::Descriptor;
-use descriptor::{list_describe_to_string, list_describe_with_header_to_string};
+use descriptor::{table_describe_to_string, table_describe_with_header_to_string, Descriptor};
 
 pub fn no_color_and_line_return(str: String) -> String {
     format!(
@@ -27,7 +26,7 @@ fn test_table_descriptor() {
             value: "b".to_string(),
         },
     ];
-    let table = list_describe_to_string(&table).unwrap();
+    let table = table_describe_to_string(&table).unwrap();
 
     assert_eq!(
         r#"
@@ -65,7 +64,7 @@ fn test_table_skip() {
         },
     ];
 
-    let table = list_describe_to_string(&list).unwrap();
+    let table = table_describe_to_string(&list).unwrap();
 
     assert_eq!(
         r#"
@@ -77,7 +76,7 @@ row2  row         s
     );
 
     let table =
-        list_describe_with_header_to_string(&list, &vec!["hidden_one".to_string()]).unwrap();
+        table_describe_with_header_to_string(&list, &vec!["hidden_one".to_string()]).unwrap();
 
     assert_eq!(
         r#"
@@ -112,7 +111,7 @@ fn test_table_headers() {
         },
     ];
 
-    let table = list_describe_to_string(&table).unwrap();
+    let table = table_describe_to_string(&table).unwrap();
     assert_eq!(
         r#"
 TABLE LONG_COLUMN
@@ -141,7 +140,7 @@ fn test_table_inner() {
         parent: "parent".to_string(),
     };
 
-    let table = list_describe_to_string(&vec![foo]).unwrap();
+    let table = table_describe_to_string(&vec![foo]).unwrap();
     assert_eq!(
         r#"
 INNER_FOO.STRING PARENT
@@ -176,7 +175,7 @@ fn test_into_field_level() {
             }
         }
     }
-    let table = list_describe_to_string(&vec![Foo {
+    let table = table_describe_to_string(&vec![Foo {
         foo: Bar {
             foo: "a".to_string(),
             bar: "b".to_string(),
@@ -194,20 +193,20 @@ a-b
 }
 
 #[test]
-fn test_additional_struct() {
+fn test_extra_fields() {
     #[derive(Descriptor)]
-    #[descriptor(additional_struct = ComputedStruct)]
+    #[descriptor(extra_fields = ExtraFieldsStruct)]
     struct Foo {
         first_field: String,
         number: u32,
     }
 
     #[derive(Descriptor)]
-    struct ComputedStruct {
+    struct ExtraFieldsStruct {
         anything: String,
     }
 
-    impl From<&Foo> for ComputedStruct {
+    impl From<&Foo> for ExtraFieldsStruct {
         fn from(b: &Foo) -> Self {
             Self {
                 anything: format!("{}-{}", b.first_field, b.number / 10),
@@ -215,7 +214,7 @@ fn test_additional_struct() {
         }
     }
 
-    let table = list_describe_to_string(&vec![Foo {
+    let table = table_describe_to_string(&vec![Foo {
         first_field: "test".to_string(),
         number: 200,
     }])
@@ -246,7 +245,7 @@ fn test_map_all() {
         }
     }
 
-    let table = list_describe_to_string(&vec![
+    let table = table_describe_to_string(&vec![
         Foo {
             first_field: "test".to_string(),
             number: 200,

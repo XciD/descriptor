@@ -1,10 +1,413 @@
+//! Easy pretty print your Rust struct into single element or list
+//!
+//! # Simple Example
+//! ```
+//! use descriptor::{object_describe_to_string, table_describe_to_string, Descriptor};
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     age: i32,
+//!     address: Address,
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct Address {
+//!     street: String,
+//!     town: String,
+//! }
+//!
+//! let user1 = User{
+//!     name: "Adrien".to_string(),
+//!     age: 32,
+//!     address: Address{
+//!         street: "Main street".to_string(),
+//!         town: "NY".to_string()
+//!     }
+//! };
+//! let user2 = User{
+//!     name: "Corentin".to_string(),
+//!     age: 40,
+//!     address: Address{
+//!         street: "10 rue de la paix".to_string(),
+//!         town: "Paris".to_string()
+//!     }
+//! };
+//! let description = object_describe_to_string(&user1).unwrap();
+//!
+//! assert_eq!(r#"
+//! Name:    Adrien
+//! Age:     32
+//! Address:
+//!   Street: Main street
+//!   Town:   NY
+//! "#,  description);
+//!
+//! let table = table_describe_to_string(&vec![user1, user2]).unwrap();
+//!
+//! assert_eq!(r#"
+//! NAME     AGE ADDRESS.STREET    ADDRESS.TOWN
+//! Adrien   32  Main street       NY
+//! Corentin 40  10 rue de la paix Paris
+//! "#, format!("\n{}", table));
+//! ```
+//!
+//! # Macro attributes
+//! ## Struct attributes
+//!
+//! #### `#[descriptor(flatten)]`
+//! Flatten a struct into another.
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     age: i32,
+//!     #[descriptor(flatten)]
+//!     address: Address
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct Address {
+//!     street: String,
+//!     town: String,
+//! }
+//!
+//! let foo = User{
+//!     name: "Adrien".to_string(),
+//!     age: 32,
+//!     address: Address{
+//!         street: "Main street".to_string(),
+//!         town: "NY".to_string()
+//!     }
+//! };
+//! let description = object_describe_to_string(&foo).unwrap();
+//!
+//! assert_eq!(r#"
+//! Name:    Adrien
+//! Age:     32
+//! Street:  Main street
+//! Town:    NY
+//! "#,  description);
+//! ```
+//!
+//! ### `#[descriptor(into = AnotherStruct)]`
+//! The `into` parameter convert the struct into another before describe.
+//!
+//! The `From` or `Into` Trait should be implemented and `AnotherStruct` should implement the `Describe` trait
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! #[derive(Descriptor)]
+//! pub struct ProgressDescribe {
+//!     pub transfer: String,
+//! }
+//!
+//! impl From<&Progress> for ProgressDescribe {
+//!     fn from(progress: &Progress) -> Self {
+//!         let bar_length = 20;
+//!         let pad_l = ((progress.processed * bar_length) / progress.total.max(1)) as usize;
+//!         let bar = format!(
+//!             "[{:=>pad_l$}>{:>pad_r$}] {}/{}",
+//!             "",
+//!             "",
+//!             progress.processed,
+//!             progress.total,
+//!             pad_l = pad_l,
+//!             pad_r = bar_length as usize - pad_l
+//!         );
+//!
+//!         Self {
+//!             transfer: bar,
+//!         }
+//!     }
+//! }
+//!
+//! #[derive(Descriptor)]
+//! #[descriptor(into = ProgressDescribe)]
+//! struct Progress {
+//!     pub processed: u64,
+//!     pub total: u64,
+//! }
+//!
+//! let progress = Progress{
+//!    processed: 20,
+//!    total: 40,
+//! };
+//! let description = object_describe_to_string(&progress).unwrap();
+//!
+//! assert_eq!(r#"
+//! Transfer: [==========>          ] 20/40
+//! "#,  description);
+//! ```
+//!
+//! ### `#[descriptor(extra_fields = ExtraStruct)]`
+//!
+//! Add fields from another struct into the description, useful for computed values without overriding real values.
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! #[derive(Descriptor)]
+//! #[descriptor(extra_fields = AgeEntity)]
+//! struct User {
+//!     name: String,
+//!     created_at: i32,
+//! }
+//!
+//! #[derive(Descriptor)]
+//! pub struct AgeEntity {
+//!     pub age: String,
+//! }
+//!
+//! impl From<&User> for AgeEntity {
+//!     fn from(u: &User) -> Self {
+//!         Self {
+//!             age: format!("{} days ago", u.created_at),
+//!         }
+//!     }
+//! }
+//!
+//! let progress = User{
+//!    name: "Adrien".to_string(),
+//!    created_at: 40,
+//! };
+//! let description = object_describe_to_string(&progress).unwrap();
+//! assert_eq!(r#"
+//! Name:       Adrien
+//! Created At: 40
+//! Age:        40 days ago
+//! "#,  description);
+//! ```
+//!
+//! ### `#[descriptor(default_headers = [""])]`
+//!
+//! Overrides default headers when using the table output
+//! ```
+//! use descriptor::{Descriptor, table_describe_to_string};
+//! #[derive(Descriptor, Clone)]
+//! #[descriptor(default_headers = ["brand", "seat"])]
+//! struct Car {
+//!     brand: String,
+//!     seat: i16,
+//!     model: String,
+//! }
+//! let cars = vec![
+//!     Car{brand: "Audi".to_string(), seat:4, model: "A3".to_string()},
+//!     Car{brand: "Mercedes".to_string(), seat: 2, model: "GLC".to_string()}
+//! ];
+//!
+//! let description = table_describe_to_string(&cars).unwrap();
+//! assert_eq!(r#"
+//! BRAND    SEAT
+//! Audi     4
+//! Mercedes 2
+//! "#,  format!("\n{}", description));
+//! ```
+//!
+//! ## Field attributes
+//!
+//! ### `#[descriptor(map = ident)]`
+//! Takes a transformation function as parameter, called before generating the field.
+//! Return value of the function should implement the `Describe` Trait
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! fn age_to_string(val: &i32) -> String {
+//!   format!("{} years", val)
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     #[descriptor(map = age_to_string)]
+//!     age: i32,
+//! }
+//! let foo = User{
+//!     name: "Adrien".to_string(),
+//!     age: 32,
+//! };
+//! let description = object_describe_to_string(&foo).unwrap();
+//! assert_eq!(r#"
+//! Name: Adrien
+//! Age:  32 years
+//! "#,  description);
+//! ```
+//! `map` parameter can be used with `resolve_option` parameter.
+//! If the field is an Option, it extract it before calling the transformation function
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//!
+//! fn age_to_string(val: &i32) -> String {
+//!   format!("{} years", val)
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     #[descriptor(map = age_to_string, resolve_option)]
+//!     age: Option<i32>,
+//! }
+//! let foo = User{
+//!     name: "Adrien".to_string(),
+//!     age: Option::Some(32),
+//! };
+//! let description = object_describe_to_string(&foo).unwrap();
+//! assert_eq!(r#"
+//! Name: Adrien
+//! Age:  32 years
+//! "#,  description);
+//! ```
+//! ### `#[descriptor(into)]`
+//!
+//! Act like `into` parameter in struct level,
+//!
+//! `into` parameter can be used with `map` and `method` parameter in field level.
+//! Sometimes, it's impossible to implement `Into` and `From` for some struct,
+//! you can still use a public method from the struct
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//! #[derive(Descriptor)]
+//! struct Download {
+//!     pub filename: String,
+//!     #[descriptor(into = String, map = to_string, method)]
+//!     pub progress: Progress,
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct Progress {
+//!     pub processed: u64,
+//!     pub total: u64,
+//! }
+//! impl Progress {
+//!     fn to_string(&self) -> String {
+//!         format!("{}/{}", self.processed, self.total)
+//!     }
+//! }
+//! let download = Download{
+//!     filename: "debian-11.iso".to_string(),
+//!     progress: Progress{ processed: 2, total: 4},
+//! };
+//!
+//! let description = object_describe_to_string(&download).unwrap();
+//! assert_eq!(r#"
+//! Filename: debian-11.iso
+//! Progress: 2/4
+//! "#,  description);
+//! ```
+//! ### `#[descriptor(output_table)]`
+//!
+//! Output a table-like output inside the description.
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string};
+//! #[derive(Descriptor, Clone)]
+//! struct Car {
+//!     name: String,
+//!     seat: i16,
+//! }
+//!
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     cars: Vec<Car>,
+//!     #[descriptor(output_table)]
+//!     cars_list: Vec<Car>,
+//! }
+//!
+//! let cars = vec![Car{name: "Audi".to_string(), seat:4}, Car{name: "Mercedes".to_string(), seat: 2}];
+//!
+//! let user = User{
+//!     name: "Adrien".to_string(),
+//!     cars: cars.clone(),
+//!     cars_list: cars.clone(),
+//! };
+//! let description = object_describe_to_string(&user).unwrap();
+//! assert_eq!(r#"
+//! Name:      Adrien
+//! Cars:
+//! - Name: Audi
+//!   Seat: 4
+//! - Name: Mercedes
+//!   Seat: 2
+//! Cars List:
+//!   NAME       SEAT
+//!   Audi       4
+//!   Mercedes   2
+//! "#,  description);
+//! ```
+//! ### `#[descriptor(skip_header)]`
+//!
+//! Skip this field from default headers
+//!
+//! ```
+//! use descriptor::{Descriptor, object_describe_to_string, table_describe_to_string, table_describe_with_header_to_string};
+//! #[derive(Descriptor, Clone)]
+//! struct Car {
+//!     brand: String,
+//!     #[descriptor(skip_header)]
+//!     seat: i16,
+//!     model: String,
+//! }
+//! let cars = vec![
+//!     Car{brand: "Audi".to_string(), seat:4, model: "A3".to_string()},
+//!     Car{brand: "Mercedes".to_string(), seat: 2, model: "GLC".to_string()}
+//! ];
+//!
+//! let description = table_describe_to_string(&cars).unwrap();
+//! assert_eq!(r#"
+//! BRAND    MODEL
+//! Audi     A3
+//! Mercedes GLC
+//! "#,  format!("\n{}", description));
+//!
+//! let description = table_describe_with_header_to_string(&cars,&vec!["seat".to_string()] ).unwrap();
+//! assert_eq!(r#"
+//! SEAT
+//! 4
+//! 2
+//! "#,  format!("\n{}", description));
+//! ```
+//!
+//! ## Enum parameters
+//! ### `#[descriptor(rename_description = "Renamed")]`
+//!
+//! Rename the value for enums
+//!
+//! ```
+//! use descriptor::{object_describe_to_string, Descriptor};
+//! #[derive(Descriptor)]
+//! struct User {
+//!     name: String,
+//!     role: Role,
+//! }
+//! #[derive(Descriptor)]
+//! enum Role {
+//!     Admin,
+//!     #[descriptor(rename_description = "User role")]
+//!     User,
+//! }
+//!
+//! let description = object_describe_to_string(&User {
+//!    name: "Adrien".to_string(),
+//!    role: Role::User,
+//! }).unwrap();
+//! assert_eq!(r#"
+//! Name: Adrien
+//! Role: User role
+//! "#, description);
+//! ```
+//!
+//!
 use std::collections::HashMap;
 use std::io;
 
 use chrono::{DateTime, Utc};
 use convert_case::{Case, Casing};
-use crossterm::style::{StyledContent, Stylize};
-
+#[doc(hidden)]
 pub use descriptor_derive::{self, *};
 
 #[derive(Clone, Default)]
@@ -63,7 +466,7 @@ impl Context {
         W: io::Write,
     {
         writeln!(writer)?;
-        Printer::describe_list_internal(data, &[], writer, self.indent_and_table())
+        Describer::describe_list_internal(data, &[], writer, self.indent_and_table())
     }
 
     pub fn write_title<W>(&self, writer: &mut W, field: &str, first_field: bool) -> io::Result<()>
@@ -112,6 +515,7 @@ impl Context {
     }
 }
 
+#[doc(hidden)]
 pub fn get_keys(field_name: &str) -> (&str, &str) {
     match field_name.split_once(".") {
         None => (field_name, ""),
@@ -121,7 +525,7 @@ pub fn get_keys(field_name: &str) -> (&str, &str) {
 
 pub trait Describe {
     // Method that take a field name and should return a String value of the field.
-    // This method will extract keys with dot in order to call the to_field method for children
+    // This method extract keys with dot in order to call the to_field method for children
     fn to_field(&self, field_name: &str) -> String;
 
     // Return the default_headers for the structs
@@ -143,7 +547,7 @@ pub trait Describe {
         0
     }
 
-    // Describe will write the current description of the struct
+    // Describe write the current description of the struct
     // The current version is used for scalar types
     fn describe<W>(&self, writer: &mut W, ctx: Context) -> io::Result<()>
     where
@@ -174,7 +578,7 @@ impl<V: Describe> Describe for HashMap<String, V> {
                 self[k].describe(writer, ctx.indent(pad, k.len()))?;
             }
         } else {
-            ctx.write_value(writer, "~".bold().to_string())?
+            ctx.write_value(writer, "~".to_string())?
         }
         Ok(())
     }
@@ -190,7 +594,7 @@ impl<T: Describe> Describe for Vec<T> {
 
     fn describe<W: io::Write>(&self, writer: &mut W, ctx: Context) -> io::Result<()> {
         if self.is_empty() {
-            ctx.write_value(writer, "~".bold().to_string())
+            ctx.write_value(writer, "~".to_string())
         } else {
             for inner in self {
                 inner.describe(writer, ctx.array())?;
@@ -203,7 +607,7 @@ impl<T: Describe> Describe for Vec<T> {
 impl<T: Describe> Describe for Option<T> {
     fn to_field(&self, field_name: &str) -> String {
         match self {
-            None => "~".bold().to_string(),
+            None => "~".to_string(),
             Some(v) => v.to_field(field_name),
         }
     }
@@ -218,39 +622,15 @@ impl<T: Describe> Describe for Option<T> {
 
     fn describe<W: io::Write>(&self, writer: &mut W, ctx: Context) -> io::Result<()> {
         match self {
-            None => ctx.write_value(writer, "~".bold().to_string()),
+            None => ctx.write_value(writer, "~".to_string()),
             Some(v) => v.describe(writer, ctx),
         }
     }
 }
 
-#[macro_export]
-macro_rules! print_macro {
-    (
-        $t: ty
-    ) => {
-        impl Describe for $t {
-            fn to_field(&self, _: &str) -> String {
-                self.to_string()
-            }
-        }
-    };
-}
+pub struct Describer;
 
-print_macro!(String);
-print_macro!(StyledContent<String>);
-print_macro!(i32);
-print_macro!(i64);
-print_macro!(u32);
-print_macro!(u64);
-print_macro!(u16);
-print_macro!(i16);
-print_macro!(usize);
-print_macro!(bool);
-
-pub struct Printer;
-
-impl Printer {
+impl Describer {
     pub fn describe_object<W: io::Write, T>(
         data: &T,
         writer: &mut W,
@@ -334,7 +714,7 @@ impl Printer {
             .collect::<Vec<_>>();
         for row in rows.iter() {
             for (idx, cell) in row.iter().enumerate() {
-                col_widths[idx] = col_widths[idx].max(Self::get_string_size(cell))
+                col_widths[idx] = col_widths[idx].max(Self::compute_string_size(cell))
             }
         }
 
@@ -355,7 +735,7 @@ impl Printer {
                 writer,
                 "{:<offset$}{}{}",
                 "",
-                cell.as_str().bold(),
+                cell.as_str(),
                 space,
                 offset = ctx.offset
             )?;
@@ -375,7 +755,7 @@ impl Printer {
                     format!(
                         "{:width$}",
                         "",
-                        width = col_widths[idx] - Self::get_string_size(&cell)
+                        width = col_widths[idx] - Self::compute_string_size(&cell)
                     )
                 } else {
                     format!("")
@@ -393,7 +773,7 @@ impl Printer {
         Ok(())
     }
 
-    fn get_string_size(str: &str) -> usize {
+    fn compute_string_size(str: &str) -> usize {
         String::from_utf8(strip_ansi_escapes::strip(str).unwrap())
             .unwrap_or_else(|_| str.to_string())
             .len()
@@ -402,36 +782,59 @@ impl Printer {
 
 pub fn object_describe_to_string<T: Describe>(object: &T) -> io::Result<String> {
     let mut vec = Vec::with_capacity(128);
-    Printer::describe_object(object, &mut vec, Context::default())?;
+    Describer::describe_object(object, &mut vec, Context::default())?;
     let string = String::from_utf8(vec).unwrap();
     Ok(string)
 }
 
 pub fn object_describe<W: io::Write, T: Describe>(object: &T, writer: &mut W) -> io::Result<()> {
-    Printer::describe_object(object, writer, Context::default())
+    Describer::describe_object(object, writer, Context::default())
 }
 
-pub fn list_describe_to_string<T: Describe>(data: &[T]) -> io::Result<String> {
+pub fn table_describe_to_string<T: Describe>(data: &[T]) -> io::Result<String> {
     let mut vec = Vec::with_capacity(128);
-    Printer::describe_list(data, &mut vec, Context::default())?;
+    Describer::describe_list(data, &mut vec, Context::default())?;
     let string = String::from_utf8(vec).unwrap();
     Ok(string)
 }
 
-pub fn list_describe_with_header_to_string<T: Describe>(
+pub fn table_describe_with_header_to_string<T: Describe>(
     data: &[T],
     headers: &[String],
 ) -> io::Result<String> {
     let mut vec = Vec::with_capacity(128);
-    Printer::describe_list_with_header(data, headers, &mut vec, Context::default())?;
+    Describer::describe_list_with_header(data, headers, &mut vec, Context::default())?;
     let string = String::from_utf8(vec).unwrap();
     Ok(string)
 }
 
-pub fn list_describe<W: io::Write, T: Describe>(
+pub fn table_describe<W: io::Write, T: Describe>(
     data: &[T],
     headers: &[String],
     writer: &mut W,
 ) -> io::Result<()> {
-    Printer::describe_list_with_header(data, headers, writer, Context::default())
+    Describer::describe_list_with_header(data, headers, writer, Context::default())
 }
+
+#[doc(hidden)]
+macro_rules! describe_macro_to_string {
+    (
+        $t: ty
+    ) => {
+        impl Describe for $t {
+            fn to_field(&self, _: &str) -> String {
+                self.to_string()
+            }
+        }
+    };
+}
+
+describe_macro_to_string!(String);
+describe_macro_to_string!(i32);
+describe_macro_to_string!(i64);
+describe_macro_to_string!(u32);
+describe_macro_to_string!(u64);
+describe_macro_to_string!(u16);
+describe_macro_to_string!(i16);
+describe_macro_to_string!(usize);
+describe_macro_to_string!(bool);

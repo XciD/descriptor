@@ -16,7 +16,7 @@ pub struct DescriptorStructAttr {
     pub into: Option<Expr>,
     pub headers: Option<Expr>,
     pub map: Option<Expr>,
-    pub additional_struct: Option<Expr>,
+    pub extra_fields: Option<Expr>,
 }
 
 #[derive(Clone)]
@@ -93,7 +93,7 @@ pub fn extract_struct_attributes(all_attrs: &[Attribute]) -> DescriptorStructAtt
         into: None,
         headers: None,
         map: None,
-        additional_struct: None,
+        extra_fields: None,
     };
 
     for attr in parse_attributes(all_attrs) {
@@ -112,8 +112,8 @@ pub fn extract_struct_attributes(all_attrs: &[Attribute]) -> DescriptorStructAtt
             ("map", _, _, ident) => {
                 abort! {ident,"expected `string literal` or `expression` after `=`"}
             }
-            ("additional_struct", Some(expr), ..) => struct_attr.additional_struct = Some(expr),
-            ("additional_struct", _, _, ident) => {
+            ("extra_fields", Some(expr), ..) => struct_attr.extra_fields = Some(expr),
+            ("extra_fields", _, _, ident) => {
                 abort! {ident,"expected `string literal` or `expression` after `=`"}
             }
             ("default_headers", Some(expr), ..) => struct_attr.headers = Some(expr),

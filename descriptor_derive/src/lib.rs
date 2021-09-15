@@ -139,10 +139,10 @@ fn to_field_for_struct(fields: &[StructField], struct_attributes: &DescriptorStr
         })
         .for_each(|ts| match_to_field.extend(ts));
 
-    let fallback = if let Some(additional_struct) = &struct_attributes.additional_struct {
+    let fallback = if let Some(extra_fields) = &struct_attributes.extra_fields {
         quote! {
             _ => {
-                Into::<#additional_struct>::into(self).to_field(field_name)
+                Into::<#extra_fields>::into(self).to_field(field_name)
             },
         }
     } else {
@@ -207,9 +207,9 @@ fn rename_headers_for_struct(
         })
         .for_each(|ts| rename_headers.extend(ts));
 
-    if let Some(additional_struct) = &struct_attributes.additional_struct {
+    if let Some(extra_fields) = &struct_attributes.extra_fields {
         rename_headers.extend(quote! {
-            stringify!(#additional_struct) => <#additional_struct>::header_name(_child),
+            stringify!(#extra_fields) => <#extra_fields>::header_name(_child),
         });
     }
 
@@ -256,9 +256,9 @@ fn headers_for_struct(fields: &[StructField], struct_attributes: &DescriptorStru
         });
     }
 
-    if let Some(additional_struct) = &struct_attributes.additional_struct {
+    if let Some(extra_fields) = &struct_attributes.extra_fields {
         headers.extend(quote! {
-            let mut fields = <#additional_struct>::default_headers();
+            let mut fields = <#extra_fields>::default_headers();
             headers.append(&mut fields);
         })
     }
@@ -328,9 +328,9 @@ fn describe_method_for_struct(
                 .map(|(i, x)| describe_field(x, i == 0))
                 .for_each(|value| describe.extend(value));
 
-            if let Some(additional_struct) = &struct_attributes.additional_struct {
+            if let Some(extra_fields) = &struct_attributes.extra_fields {
                 describe.extend(quote! {
-                    Into::<#additional_struct>::into(self).describe(writer, ctx.pad(Self::struct_pad()))?;
+                    Into::<#extra_fields>::into(self).describe(writer, ctx.pad(Self::struct_pad()))?;
                 })
             }
 
