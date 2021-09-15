@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use descriptor::{object_describe_to_string, Descriptor, table_describe, table_describe_to_string};
+use descriptor::{object_describe_to_string, Descriptor};
 
 pub fn no_color(str: String) -> String {
     String::from_utf8(strip_ansi_escapes::strip(str).unwrap()).unwrap()
@@ -49,12 +49,6 @@ One:         tee
 
 #[test]
 fn test_func() {
-
-    #[derive(Descriptor)]
-    struct Bar {
-        test: String,
-    }
-
     #[derive(Descriptor)]
     struct Foo {
         #[descriptor(map = map_test)]
@@ -65,20 +59,25 @@ fn test_func() {
         optional_none: Option<u64>,
     }
 
-    fn map_test(val: &u64) -> Bar {
-        Bar{test: format!("{} seconds", val)}
+    fn map_test(val: &u64) -> String {
+        format!("{} seconds", val)
     }
 
-    let foo = Foo {
+    let description = object_describe_to_string(&Foo {
         time: 10000,
         optional_some: Some(10),
         optional_none: None,
-    };
-    let description = object_describe_to_string(&foo)
+    })
     .unwrap();
 
-    let result = table_describe_to_string(&vec![foo]).unwrap();
-    println!("{}", result)
+    assert_eq!(
+        r#"
+Time:          10000 seconds
+Optional Some: 10 seconds
+Optional None: ~
+"#,
+        no_color(description)
+    );
 }
 
 #[test]
