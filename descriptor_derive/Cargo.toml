@@ -1,6 +1,6 @@
 [package]
 name = "descriptor_derive"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Adrien Carreira <adrien&xcid.fr>"]
 edition = "2018"
 description = "A simple to use struct descriptor, derive crate"

@@ -1,10 +1,11 @@
 [package]
 name = "descriptor"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Adrien Carreira <adrien&xcid.fr>"]
 edition = "2018"
 description = "A simple to use struct descriptor"
 repository = "https://github.com/XciD/descriptor"
+documentation = "https://docs.rs/descriptor/"
 keywords = [
     "struct",
     "description",
@@ -15,7 +16,6 @@ license = "Apache-2.0"
 readme = "README.md"
 
 [dependencies]
-descriptor_derive = { path = "./descriptor_derive", version = "=0.0.3" }
-crossterm = "0.20"
+descriptor_derive = { path = "./descriptor_derive", version = "=0.0.4" }
 strip-ansi-escapes = "0.1"
 convert_case = "0.4"
