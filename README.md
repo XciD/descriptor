@@ -1,10 +1,10 @@
-<!-- omit in TOC -->
-
 # Simple Struct Descriptor
 
 [![Crates.io](https://img.shields.io/crates/v/descriptor?style=flat-square)](https://crates.io/crates/descriptor)
 [![Crates.io](https://img.shields.io/crates/d/descriptor?style=flat-square)](https://crates.io/crates/descriptor)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/XciD/descriptor/blob/master/LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](https://github.com/XciD/descriptor/blob/main/LICENSE)
+[![Build Status](https://img.shields.io/github/workflow/status/XciD/descriptor/CI/main?style=flat-square)](https://github.com/XciD/descriptor/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage Status](https://coveralls.io/repos/github/XciD/descriptor/badge.svg?branch=main)](https://coveralls.io/github/XciD/descriptor?branch=main)
 
 Easy pretty print your Rust struct into single element or table
 
